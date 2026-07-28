@@ -13,10 +13,10 @@
             font-family: 'Cairo', sans-serif;
             background-color: #f4f7f6;
             margin: 0;
-            padding: 0;
+            padding: 20px;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             min-height: 100vh;
         }
 
@@ -25,9 +25,10 @@
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             padding: 30px;
             text-align: center;
+            margin-top: 5vh;
         }
 
         h1 {
@@ -63,18 +64,18 @@
             margin-bottom: 20px;
         }
 
-        input[type="number"] {
+        input[type="text"] {
             padding: 12px 15px;
             font-size: 16px;
             border: 2px solid #bdc3c7;
             border-radius: 8px;
             outline: none;
-            width: 60%;
+            width: 70%;
             transition: 0.3s;
             font-family: 'Cairo', sans-serif;
         }
 
-        input[type="number"]:focus {
+        input[type="text"]:focus {
             border-color: #3498db;
         }
 
@@ -95,20 +96,31 @@
             background-color: #2980b9;
         }
 
-        /* Result Card Styles */
-        #result-card {
-            display: none;
+        /* Results Container */
+        #results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             margin-top: 20px;
+        }
+
+        /* Result Card Styles */
+        .result-card {
             padding: 20px;
             border-radius: 10px;
             background: #f9f9f9;
             border: 1px solid #ddd;
             text-align: right;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .result-item {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             font-size: 16px;
+        }
+
+        .result-item:last-child {
+            margin-bottom: 0;
         }
 
         .result-item strong {
@@ -127,17 +139,28 @@
         }
 
         /* Status Colors */
-        .status-passed { background-color: #2ecc71; } /* ناجح */
-        .status-second-round { background-color: #f39c12; } /* دور ثان */
-        .status-failed { background-color: #e74c3c; } /* راسب */
-        .status-absent { background-color: #95a5a6; } /* غياب */
+        .status-passed { background-color: #2ecc71; }
+        .status-second-round { background-color: #f39c12; }
+        .status-failed { background-color: #e74c3c; }
+        .status-absent { background-color: #95a5a6; }
         .status-default { background-color: #34495e; }
 
-        #error-msg {
-            color: #e74c3c;
+        #msg-box {
             font-weight: 600;
             display: none;
             margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .msg-error {
+            color: #e74c3c;
+            background-color: #fadbd8;
+        }
+
+        .msg-warning {
+            color: #d35400;
+            background-color: #fdebd0;
         }
     </style>
 </head>
@@ -145,7 +168,7 @@
 
     <div class="container">
         <h1>نتيجة امتحانات الدور الأول 2026</h1>
-        <p class="subtitle">ابحث برقم الجلوس للحصول على النتيجة</p>
+        <p class="subtitle">ابحث برقم الجلوس أو بالاسم للحصول على النتيجة</p>
 
         <div id="loading">
             جاري تحميل قاعدة البيانات (أكثر من 900 ألف طالب)...<br>
@@ -154,58 +177,42 @@
 
         <div id="search-section">
             <div class="input-group">
-                <input type="number" id="seatInput" placeholder="أدخل رقم الجلوس هنا (مثال: 2001970)" onkeypress="handleEnter(event)">
+                <!-- Changed to type="text" to accept both names and numbers -->
+                <input type="text" id="searchInput" placeholder="أدخل رقم الجلوس أو الاسم هنا..." onkeypress="handleEnter(event)">
                 <button onclick="searchResult()">بحث</button>
             </div>
-            <div id="error-msg">عذراً، لم يتم العثور على رقم الجلوس هذا. تأكد من الرقم وحاول مجدداً.</div>
+            <div id="msg-box"></div>
         </div>
 
-        <div id="result-card">
-            <div class="result-item">
-                <strong>الاسم:</strong> <span id="res-name"></span>
-            </div>
-            <div class="result-item">
-                <strong>رقم الجلوس:</strong> <span id="res-seat"></span>
-            </div>
-            <div class="result-item">
-                <strong>المجموع الكلي:</strong> <span id="res-score"></span> / 320
-            </div>
-            <div class="result-item">
-                <strong>حالة الطالب:</strong> <span id="res-status" class="status-badge"></span>
-            </div>
-        </div>
+        <div id="results-container"></div>
     </div>
 
     <script>
-        // The Google Sheets CSV URL
         const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTp5dd_Ey70u94GlS-YeoaZmj7mOrX6IE9EE9B0xEs4RfU_YU6OAjzggHWk0kaeuew8pBIsqoGr7Tm/pub?output=csv";
         
-        // Use a Map for lightning-fast O(1) searches after the data loads
-        const studentsMap = new Map();
+        const studentsMap = new Map(); // For O(1) seat number lookups
+        const studentsArray = [];      // For iterating over names
         let headers = [];
 
-        // We use PapaParse to stream the CSV row by row to prevent memory crashes
         Papa.parse(CSV_URL, {
             download: true,
             header: true,
             skipEmptyLines: true,
             step: function(row) {
-                // On the very first row, extract the exact header names (to handle English or Arabic headers safely)
                 if (headers.length === 0) {
                     headers = Object.keys(row.data);
                 }
                 
                 const data = row.data;
-                // Identify the seating number key
                 const seatKey = headers.find(k => k.includes('seating') || k.includes('جلوس')) || headers[0];
                 
                 if (data[seatKey]) {
-                    // Map the seat number (as a string) to the student's full row data
-                    studentsMap.set(data[seatKey].toString().trim(), data);
+                    const seatNum = data[seatKey].toString().trim();
+                    studentsMap.set(seatNum, data);
+                    studentsArray.push(data);
                 }
             },
             complete: function() {
-                // When downloading and parsing is completely finished
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('search-section').style.display = 'block';
             },
@@ -222,56 +229,102 @@
             }
         }
 
+        // Helper function to normalize Arabic text for better searching
+        function normalizeArabic(text) {
+            if (!text) return '';
+            return text.replace(/[أإآ]/g, 'ا')
+                       .replace(/ة/g, 'ه')
+                       .replace(/ى/g, 'ي')
+                       .trim();
+        }
+
         function searchResult() {
-            const seatNumber = document.getElementById('seatInput').value.trim();
-            const resultCard = document.getElementById('result-card');
-            const errorMsg = document.getElementById('error-msg');
+            const query = document.getElementById('searchInput').value.trim();
+            const resultsContainer = document.getElementById('results-container');
+            const msgBox = document.getElementById('msg-box');
             
-            // Hide previous results/errors
-            resultCard.style.display = 'none';
-            errorMsg.style.display = 'none';
+            // Clear previous results
+            resultsContainer.innerHTML = '';
+            msgBox.style.display = 'none';
 
-            if (!seatNumber) return;
+            if (!query) return;
 
-            const student = studentsMap.get(seatNumber);
+            const nameKey = headers.find(k => k.includes('name') || k.includes('الاسم')) || headers[1];
+            
+            let matchedStudents = [];
+            const isNumeric = /^\d+$/.test(query);
 
-            if (student) {
-                // Dynamically find keys in case they differ slightly
-                const nameKey = headers.find(k => k.includes('name') || k.includes('الاسم')) || headers[1];
-                const scoreKey = headers.find(k => k.includes('degree') || k.includes('المجموع')) || headers[2];
-                const statusKey = headers.find(k => k.includes('case') || k.includes('حالة')) || headers[3];
-                const seatKey = headers.find(k => k.includes('seating') || k.includes('جلوس')) || headers[0];
-
-                const statusText = student[statusKey] || 'غير معروف';
-
-                // Populate fields
-                document.getElementById('res-name').innerText = student[nameKey];
-                document.getElementById('res-seat').innerText = student[seatKey];
-                document.getElementById('res-score').innerText = student[scoreKey];
-                
-                const statusElement = document.getElementById('res-status');
-                statusElement.innerText = statusText;
-                
-                // Clear old classes
-                statusElement.className = 'status-badge'; 
-
-                // Apply color logic based on status text
-                if (statusText.includes('ناجح')) {
-                    statusElement.classList.add('status-passed');
-                } else if (statusText.includes('دور ثان')) {
-                    statusElement.classList.add('status-second-round');
-                } else if (statusText.includes('راسب')) {
-                    statusElement.classList.add('status-failed');
-                } else if (statusText.includes('غياب')) {
-                    statusElement.classList.add('status-absent');
-                } else {
-                    statusElement.classList.add('status-default');
-                }
-
-                resultCard.style.display = 'block';
+            if (isNumeric) {
+                // If the user typed only numbers, assume it's a seat number lookup
+                const student = studentsMap.get(query);
+                if (student) matchedStudents.push(student);
             } else {
-                errorMsg.style.display = 'block';
+                // If the user typed text, perform a name search
+                const normalizedQuery = normalizeArabic(query);
+                
+                for (let i = 0; i < studentsArray.length; i++) {
+                    const studentName = normalizeArabic(studentsArray[i][nameKey]);
+                    if (studentName.includes(normalizedQuery)) {
+                        matchedStudents.push(studentsArray[i]);
+                        // Stop at 50 results to prevent the browser from freezing
+                        if (matchedStudents.length >= 50) {
+                            msgBox.innerText = "تم العثور على أكثر من 50 نتيجة. يرجى كتابة الاسم بشكل أدق، نعرض أول 50 فقط.";
+                            msgBox.className = 'msg-warning';
+                            msgBox.style.display = 'block';
+                            break;
+                        }
+                    }
+                }
             }
+
+            if (matchedStudents.length === 0) {
+                msgBox.innerText = "عذراً، لم يتم العثور على أي نتائج مطابقة.";
+                msgBox.className = 'msg-error';
+                msgBox.style.display = 'block';
+                return;
+            }
+
+            // Render all matched students
+            matchedStudents.forEach(student => {
+                resultsContainer.appendChild(createResultCard(student));
+            });
+        }
+
+        function createResultCard(student) {
+            const nameKey = headers.find(k => k.includes('name') || k.includes('الاسم')) || headers[1];
+            const scoreKey = headers.find(k => k.includes('degree') || k.includes('المجموع')) || headers[2];
+            const statusKey = headers.find(k => k.includes('case') || k.includes('حالة')) || headers[3];
+            const seatKey = headers.find(k => k.includes('seating') || k.includes('جلوس')) || headers[0];
+
+            const statusText = student[statusKey] || 'غير معروف';
+            
+            // Determine badge color class
+            let statusClass = 'status-default';
+            if (statusText.includes('ناجح')) statusClass = 'status-passed';
+            else if (statusText.includes('دور ثان')) statusClass = 'status-second-round';
+            else if (statusText.includes('راسب')) statusClass = 'status-failed';
+            else if (statusText.includes('غياب')) statusClass = 'status-absent';
+
+            // Create HTML structure for the card
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            
+            card.innerHTML = `
+                <div class="result-item">
+                    <strong>الاسم:</strong> <span>${student[nameKey]}</span>
+                </div>
+                <div class="result-item">
+                    <strong>رقم الجلوس:</strong> <span>${student[seatKey]}</span>
+                </div>
+                <div class="result-item">
+                    <strong>المجموع الكلي:</strong> <span>${student[scoreKey]} / 320</span>
+                </div>
+                <div class="result-item">
+                    <strong>حالة الطالب:</strong> <span class="status-badge ${statusClass}">${statusText}</span>
+                </div>
+            `;
+            
+            return card;
         }
     </script>
 </body>
