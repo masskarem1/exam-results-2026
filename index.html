@@ -246,6 +246,14 @@
         .status-absent { background: linear-gradient(135deg, #64748b, #475569); }
         .status-default { background: linear-gradient(135deg, #3b82f6, #2563eb); }
 
+        /* Percentage Badge */
+        .percentage-text {
+            color: #2563eb !important; 
+            font-weight: 800 !important;
+            margin-right: 8px;
+            display: inline-block;
+        }
+
         #msg-box {
             font-weight: 700;
             display: none;
@@ -412,6 +420,19 @@
             const seatKey = headers.find(k => k.includes('seating') || k.includes('جلوس')) || headers[0];
 
             const statusText = student[statusKey] || 'غير معروف';
+            const rawScoreText = student[scoreKey] || '';
+            
+            // Calculate Percentage
+            let percentageHtml = '';
+            const numericScore = parseFloat(rawScoreText);
+            
+            // Make sure the score is actually a number before calculating
+            if (!isNaN(numericScore)) {
+                const percentage = (numericScore / 320) * 100;
+                // .toFixed(3) formats it to 00.000 (e.g. 85.453)
+                // dir="ltr" ensures the % sign stays on the right side of the number in RTL layout
+                percentageHtml = `<span class="percentage-text" dir="ltr">(${percentage.toFixed(3)}%)</span>`;
+            }
             
             let statusClass = 'status-default';
             if (statusText.includes('ناجح')) statusClass = 'status-passed';
@@ -430,7 +451,7 @@
                     <strong>رقم الجلوس:</strong> <span>${student[seatKey]}</span>
                 </div>
                 <div class="result-item">
-                    <strong>المجموع الكلي:</strong> <span>${student[scoreKey]} / 320</span>
+                    <strong>المجموع الكلي:</strong> <span>${rawScoreText} / 320</span> ${percentageHtml}
                 </div>
                 <div class="result-item">
                     <strong>حالة الطالب:</strong> <span class="status-badge ${statusClass}">${statusText}</span>
