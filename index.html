@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نتيجة امتحانات الدور الأول 2026</title>
+    <!-- Include PapaParse for efficient CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap');
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        #loading {
+            color: #e67e22;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 20px;
+            border: 2px dashed #e67e22;
+            border-radius: 8px;
+            background: #fff3e0;
+        }
+
+        #search-section {
+            display: none;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="number"] {
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            outline: none;
+            width: 60%;
+            transition: 0.3s;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        input[type="number"]:focus {
+            border-color: #3498db;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            color: white;
+            background-color: #3498db;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        /* Result Card Styles */
+        #result-card {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            text-align: right;
+        }
+
+        .result-item {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .result-item strong {
+            display: inline-block;
+            width: 120px;
+            color: #34495e;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* Status Colors */
+        .status-passed { background-color: #2ecc71; } /* ناجح */
+        .status-second-round { background-color: #f39c12; } /* دور ثان */
+        .status-failed { background-color: #e74c3c; } /* راسب */
+        .status-absent { background-color: #95a5a6; } /* غياب */
+        .status-default { background-color: #34495e; }
+
+        #error-msg {
+            color: #e74c3c;
+            font-weight: 600;
+            display: none;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>نتيجة امتحانات الدور الأول 2026</h1>
+        <p class="subtitle">ابحث برقم الجلوس للحصول على النتيجة</p>
+
+        <div id="loading">
+            جاري تحميل قاعدة البيانات (أكثر من 900 ألف طالب)...<br>
+            يرجى الانتظار بضع ثوانٍ.
+        </div>
+
+        <div id="search-section">
+            <div class="input-group">
+                <input type="number" id="seatInput" placeholder="أدخل رقم الجلوس هنا (مثال: 2001970)" onkeypress="handleEnter(event)">
+                <button onclick="searchResult()">بحث</button>
+            </div>
+            <div id="error-msg">عذراً، لم يتم العثور على رقم الجلوس هذا. تأكد من الرقم وحاول مجدداً.</div>
+        </div>
+
+        <div id="result-card">
+            <div class="result-item">
+                <strong>الاسم:</strong> <span id="res-name"></span>
+            </div>
+            <div class="result-item">
+                <strong>رقم الجلوس:</strong> <span id="res-seat"></span>
+            </div>
+            <div class="result-item">
+                <strong>المجموع الكلي:</strong> <span id="res-score"></span> / 320
+            </div>
+            <div class="result-item">
+                <strong>حالة الطالب:</strong> <span id="res-status" class="status-badge"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // The Google Sheets CSV URL
+        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTp5dd_Ey70u94GlS-YeoaZmj7mOrX6IE9EE9B0xEs4RfU_YU6OAjzggHWk0kaeuew8pBIsqoGr7Tm/pub?output=csv";
+        
+        // Use a Map for lightning-fast O(1) searches after the data loads
+        const studentsMap = new Map();
+        let headers = [];
+
+        // We use PapaParse to stream the CSV row by row to prevent memory crashes
+        Papa.parse(CSV_URL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            step: function(row) {
+                // On the very first row, extract the exact header names (to handle English or Arabic headers safely)
+                if (headers.length === 0) {
+                    headers = Object.keys(row.data);
+                }
+                
+                const data = row.data;
+                // Identify the seating number key
+                const seatKey = headers.find(k => k.includes('seating') || k.includes('جلوس')) || headers[0];
+                
+                if (data[seatKey]) {
+                    // Map the seat number (as a string) to the student's full row data
+                    studentsMap.set(data[seatKey].toString().trim(), data);
+                }
+            },
+            complete: function() {
+                // When downloading and parsing is completely finished
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('search-section').style.display = 'block';
+            },
+            error: function(err) {
+                document.getElementById('loading').innerHTML = "حدث خطأ أثناء تحميل البيانات. يرجى تحديث الصفحة.";
+                document.getElementById('loading').style.color = "red";
+                console.error("CSV Fetch Error: ", err);
+            }
+        });
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') {
+                searchResult();
+            }
+        }
+
+        function searchResult() {
+            const seatNumber = document.getElementById('seatInput').value.trim();
+            const resultCard = document.getElementById('result-card');
+            const errorMsg = document.getElementById('error-msg');
+            
+            // Hide previous results/errors
+            resultCard.style.display = 'none';
+            errorMsg.style.display = 'none';
+
+            if (!seatNumber) return;
+
+            const student = studentsMap.get(seatNumber);
+
+            if (student) {
+                // Dynamically find keys in case they differ slightly
+                const nameKey = headers.find(k => k.includes('name') || k.includes('الاسم')) || headers[1];
+                const scoreKey = headers.find(k => k.includes('degree') || k.includes('المجموع')) || headers[2];
+                const statusKey = headers.find(k => k.includes('case') || k.includes('حالة')) || headers[3];
+                const seatKey = headers.find(k => k.includes('seating') || k.includes('جلوس')) || headers[0];
+
+                const statusText = student[statusKey] || 'غير معروف';
+
+                // Populate fields
+                document.getElementById('res-name').innerText = student[nameKey];
+                document.getElementById('res-seat').innerText = student[seatKey];
+                document.getElementById('res-score').innerText = student[scoreKey];
+                
+                const statusElement = document.getElementById('res-status');
+                statusElement.innerText = statusText;
+                
+                // Clear old classes
+                statusElement.className = 'status-badge'; 
+
+                // Apply color logic based on status text
+                if (statusText.includes('ناجح')) {
+                    statusElement.classList.add('status-passed');
+                } else if (statusText.includes('دور ثان')) {
+                    statusElement.classList.add('status-second-round');
+                } else if (statusText.includes('راسب')) {
+                    statusElement.classList.add('status-failed');
+                } else if (statusText.includes('غياب')) {
+                    statusElement.classList.add('status-absent');
+                } else {
+                    statusElement.classList.add('status-default');
+                }
+
+                resultCard.style.display = 'block';
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
