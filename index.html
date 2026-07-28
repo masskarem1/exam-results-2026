@@ -2,121 +2,215 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>نتيجة امتحانات الدور الأول 2026</title>
     <!-- Include PapaParse for efficient CSV parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap');
 
+        /* Background & Setup */
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: #f4f7f6;
             margin: 0;
             padding: 20px;
+            min-height: 100vh;
+            background-color: #e0e5ec;
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            min-height: 100vh;
+            color: #1e293b;
+            overflow-x: hidden;
+            position: relative;
         }
 
+        /* Animated Background Blobs for Glassmorphism Effect */
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: -1;
+            opacity: 0.7;
+            animation: float 10s infinite alternate ease-in-out;
+        }
+        .blob-1 {
+            width: 300px;
+            height: 300px;
+            background: #4158D0;
+            top: -50px;
+            right: -50px;
+        }
+        .blob-2 {
+            width: 400px;
+            height: 400px;
+            background: #C850C0;
+            bottom: -100px;
+            left: -100px;
+            animation-delay: -5s;
+        }
+        .blob-3 {
+            width: 250px;
+            height: 250px;
+            background: #FFCC70;
+            top: 40%;
+            left: 20%;
+            animation-duration: 15s;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 50px) scale(1.1); }
+        }
+
+        /* Glassmorphism Container */
         .container {
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             width: 100%;
             max-width: 700px;
-            padding: 30px;
+            margin-top: 4vh;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
             text-align: center;
-            margin-top: 5vh;
+            z-index: 1;
         }
 
         h1 {
-            color: #2c3e50;
-            font-size: 24px;
+            font-size: 26px;
+            font-weight: 800;
             margin-bottom: 5px;
+            color: #0f172a;
+            text-shadow: 0 2px 4px rgba(255,255,255,0.5);
         }
 
         p.subtitle {
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-bottom: 25px;
+            color: #475569;
+            font-size: 15px;
+            margin-bottom: 30px;
+            font-weight: 600;
         }
 
+        /* Loading & Messages */
         #loading {
-            color: #e67e22;
-            font-weight: 600;
+            color: #b45309;
+            font-weight: 700;
             font-size: 16px;
             padding: 20px;
-            border: 2px dashed #e67e22;
-            border-radius: 8px;
-            background: #fff3e0;
+            border-radius: 16px;
+            background: rgba(253, 230, 138, 0.5);
+            border: 1px solid rgba(253, 230, 138, 0.8);
+            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
         }
 
         #search-section {
             display: none;
         }
 
+        /* Mobile-First Input Group */
         .input-group {
             display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 25px;
         }
 
+        @media (min-width: 600px) {
+            .input-group {
+                flex-direction: row;
+            }
+        }
+
+        /* Glass Inputs & Buttons */
         input[type="text"] {
-            padding: 12px 15px;
+            width: 100%;
+            padding: 16px;
             font-size: 16px;
-            border: 2px solid #bdc3c7;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 16px;
             outline: none;
-            width: 70%;
-            transition: 0.3s;
+            box-sizing: border-box;
             font-family: 'Cairo', sans-serif;
+            color: #1e293b;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
 
         input[type="text"]:focus {
-            border-color: #3498db;
+            background: rgba(255, 255, 255, 0.9);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        input[type="text"]::placeholder {
+            color: #64748b;
         }
 
         button {
-            padding: 12px 25px;
-            font-size: 16px;
+            width: 100%;
+            padding: 16px;
+            font-size: 17px;
             color: white;
-            background-color: #3498db;
-            border: none;
-            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
             cursor: pointer;
             font-family: 'Cairo', sans-serif;
-            font-weight: 600;
-            transition: 0.3s;
+            font-weight: 800;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        @media (min-width: 600px) {
+            input[type="text"] { width: 75%; }
+            button { width: 25%; }
         }
 
         button:hover {
-            background-color: #2980b9;
+            background: rgba(37, 99, 235, 0.95);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
 
-        /* Results Container */
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Results Container & Cards */
         #results-container {
             display: flex;
             flex-direction: column;
             gap: 15px;
-            margin-top: 20px;
         }
 
-        /* Result Card Styles */
         .result-card {
             padding: 20px;
-            border-radius: 10px;
-            background: #f9f9f9;
-            border: 1px solid #ddd;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
             text-align: right;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        .result-card:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.65);
         }
 
         .result-item {
             margin-bottom: 12px;
             font-size: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         .result-item:last-child {
@@ -125,46 +219,74 @@
 
         .result-item strong {
             display: inline-block;
-            width: 120px;
-            color: #34495e;
+            width: 110px;
+            color: #334155;
+            font-weight: 800;
+        }
+
+        .result-item span {
+            color: #0f172a;
+            font-weight: 600;
         }
 
         .status-badge {
             display: inline-block;
-            padding: 5px 12px;
+            padding: 6px 16px;
             border-radius: 20px;
-            color: white;
-            font-weight: bold;
+            color: white !important;
+            font-weight: 800 !important;
             font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        /* Status Colors */
-        .status-passed { background-color: #2ecc71; }
-        .status-second-round { background-color: #f39c12; }
-        .status-failed { background-color: #e74c3c; }
-        .status-absent { background-color: #95a5a6; }
-        .status-default { background-color: #34495e; }
+        /* Status Colors - Solid for readability */
+        .status-passed { background: linear-gradient(135deg, #10b981, #059669); }
+        .status-second-round { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .status-failed { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .status-absent { background: linear-gradient(135deg, #64748b, #475569); }
+        .status-default { background: linear-gradient(135deg, #3b82f6, #2563eb); }
 
         #msg-box {
-            font-weight: 600;
+            font-weight: 700;
             display: none;
             margin-top: 15px;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 15px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
         }
 
         .msg-error {
-            color: #e74c3c;
-            background-color: #fadbd8;
+            color: #991b1b;
+            background: rgba(254, 226, 226, 0.7);
+            border: 1px solid rgba(252, 165, 165, 0.8);
         }
 
         .msg-warning {
-            color: #d35400;
-            background-color: #fdebd0;
+            color: #9a3412;
+            background: rgba(255, 237, 213, 0.7);
+            border: 1px solid rgba(253, 186, 116, 0.8);
+        }
+
+        /* Adjustments for very small screens */
+        @media (max-width: 400px) {
+            .result-item strong {
+                width: 100%;
+                margin-bottom: 4px;
+                color: #64748b;
+            }
+            .container {
+                padding: 20px 15px;
+            }
+            h1 { font-size: 22px; }
         }
     </style>
 </head>
 <body>
+
+    <!-- Background Blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
 
     <div class="container">
         <h1>نتيجة امتحانات الدور الأول 2026</h1>
@@ -177,7 +299,6 @@
 
         <div id="search-section">
             <div class="input-group">
-                <!-- Changed to type="text" to accept both names and numbers -->
                 <input type="text" id="searchInput" placeholder="أدخل رقم الجلوس أو الاسم هنا..." onkeypress="handleEnter(event)">
                 <button onclick="searchResult()">بحث</button>
             </div>
@@ -190,8 +311,8 @@
     <script>
         const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTp5dd_Ey70u94GlS-YeoaZmj7mOrX6IE9EE9B0xEs4RfU_YU6OAjzggHWk0kaeuew8pBIsqoGr7Tm/pub?output=csv";
         
-        const studentsMap = new Map(); // For O(1) seat number lookups
-        const studentsArray = [];      // For iterating over names
+        const studentsMap = new Map();
+        const studentsArray = [];
         let headers = [];
 
         Papa.parse(CSV_URL, {
@@ -218,7 +339,7 @@
             },
             error: function(err) {
                 document.getElementById('loading').innerHTML = "حدث خطأ أثناء تحميل البيانات. يرجى تحديث الصفحة.";
-                document.getElementById('loading').style.color = "red";
+                document.getElementById('loading').style.color = "#dc2626";
                 console.error("CSV Fetch Error: ", err);
             }
         });
@@ -229,7 +350,6 @@
             }
         }
 
-        // Helper function to normalize Arabic text for better searching
         function normalizeArabic(text) {
             if (!text) return '';
             return text.replace(/[أإآ]/g, 'ا')
@@ -243,7 +363,6 @@
             const resultsContainer = document.getElementById('results-container');
             const msgBox = document.getElementById('msg-box');
             
-            // Clear previous results
             resultsContainer.innerHTML = '';
             msgBox.style.display = 'none';
 
@@ -255,18 +374,15 @@
             const isNumeric = /^\d+$/.test(query);
 
             if (isNumeric) {
-                // If the user typed only numbers, assume it's a seat number lookup
                 const student = studentsMap.get(query);
                 if (student) matchedStudents.push(student);
             } else {
-                // If the user typed text, perform a name search
                 const normalizedQuery = normalizeArabic(query);
                 
                 for (let i = 0; i < studentsArray.length; i++) {
                     const studentName = normalizeArabic(studentsArray[i][nameKey]);
                     if (studentName.includes(normalizedQuery)) {
                         matchedStudents.push(studentsArray[i]);
-                        // Stop at 50 results to prevent the browser from freezing
                         if (matchedStudents.length >= 50) {
                             msgBox.innerText = "تم العثور على أكثر من 50 نتيجة. يرجى كتابة الاسم بشكل أدق، نعرض أول 50 فقط.";
                             msgBox.className = 'msg-warning';
@@ -284,7 +400,6 @@
                 return;
             }
 
-            // Render all matched students
             matchedStudents.forEach(student => {
                 resultsContainer.appendChild(createResultCard(student));
             });
@@ -298,14 +413,12 @@
 
             const statusText = student[statusKey] || 'غير معروف';
             
-            // Determine badge color class
             let statusClass = 'status-default';
             if (statusText.includes('ناجح')) statusClass = 'status-passed';
             else if (statusText.includes('دور ثان')) statusClass = 'status-second-round';
             else if (statusText.includes('راسب')) statusClass = 'status-failed';
             else if (statusText.includes('غياب')) statusClass = 'status-absent';
 
-            // Create HTML structure for the card
             const card = document.createElement('div');
             card.className = 'result-card';
             
